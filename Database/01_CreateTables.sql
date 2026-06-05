@@ -1,0 +1,81 @@
+-- Создание базы данных (если не существует)
+CREATE DATABASE TransLogisticDB;
+GO
+
+USE TransLogisticDB;
+GO
+
+-- Справочники
+CREATE TABLE DriverStatuses (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE BodyTypes (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE CargoTypes (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE OrderStatuses (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(50) NOT NULL UNIQUE,
+    SortOrder INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE Cities (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Основные таблицы
+CREATE TABLE Drivers (
+    Id NVARCHAR(10) PRIMARY KEY,
+    FullName NVARCHAR(100) NOT NULL,
+    Phone NVARCHAR(20) NOT NULL,
+    Rating DECIMAL(3,2) NOT NULL DEFAULT 0.0 CHECK (Rating >= 0 AND Rating <= 5),
+    DriverStatusId INT NOT NULL FOREIGN KEY REFERENCES DriverStatuses(Id)
+);
+
+CREATE TABLE Vehicles (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    DriverId NVARCHAR(10) NOT NULL UNIQUE FOREIGN KEY REFERENCES Drivers(Id),
+    Make NVARCHAR(50) NOT NULL,
+    LicensePlate NVARCHAR(20) NOT NULL UNIQUE,
+    CapacityTon DECIMAL(10,2) NOT NULL CHECK (CapacityTon > 0),
+    VolumeM3 DECIMAL(10,2) NOT NULL CHECK (VolumeM3 > 0),
+    LengthM DECIMAL(6,2) NULL,
+    WidthM DECIMAL(6,2) NULL,
+    HeightM DECIMAL(6,2) NULL,
+    HasCenterPass BIT NOT NULL DEFAULT 0,
+    BodyTypeId INT NOT NULL FOREIGN KEY REFERENCES BodyTypes(Id)
+);
+
+CREATE TABLE Orders (
+    Id NVARCHAR(10) PRIMARY KEY,
+    OrderDate DATE NOT NULL,
+    OriginCityId INT NOT NULL FOREIGN KEY REFERENCES Cities(Id),
+    DestCityId INT NOT NULL FOREIGN KEY REFERENCES Cities(Id),
+    CargoTypeId INT NOT NULL FOREIGN KEY REFERENCES CargoTypes(Id),
+    WeightKg DECIMAL(10,2) NOT NULL CHECK (WeightKg > 0),
+    VolumeM3 DECIMAL(10,2) NOT NULL CHECK (VolumeM3 > 0),
+    Price DECIMAL(12,2) NOT NULL CHECK (Price >= 1000),
+    StatusId INT NOT NULL FOREIGN KEY REFERENCES OrderStatuses(Id),
+    IsUrgent BIT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE OrderAssignments (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId NVARCHAR(10) NOT NULL FOREIGN KEY REFERENCES Orders(Id) ON DELETE CASCADE,
+    DriverId NVARCHAR(10) NOT NULL FOREIGN KEY REFERENCES Drivers(Id),
+    AssignmentDate DATETIME NOT NULL DEFAULT GETDATE(),
+    CompletionDate DATETIME NULL,
+    ActualPrice DECIMAL(12,2) NOT NULL,
+    CommissionPercent DECIMAL(5,2) NOT NULL DEFAULT 15,
+    IsCancelled BIT NOT NULL DEFAULT 0,
+    CancelReason NVARCHAR(200) NULL
+);
