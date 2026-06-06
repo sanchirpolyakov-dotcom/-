@@ -1,39 +1,106 @@
-# ТрансЛогистСервис – Грузовое такси с поиском попутных грузов
+# ТрансЛогистСервис — курсовой проект (ТЗ № 45/19-КП)
 
-Курсовой проект по дисциплине «Базы данных и клиентские приложения».
+Информационная система автоматизации поиска попутных грузов для ООО «ТрансЛогистСервис».
 
-## Описание
-Система автоматизирует поиск попутных грузов для водителей коммерческого транспорта и управление заказами для диспетчеров.
+## Состав решения
 
-## Технологии
-- СУБД: Microsoft SQL Server
-- Диспетчер: WinForms + ADO.NET
-- Водитель: WPF + Entity Framework Core
+| Компонент | Технология | Папка |
+|-----------|------------|-------|
+| База данных MS SQL Server | SQL, Views, SP | `Database/` |
+| Административный модуль (диспетчер) | C# WinForms + **ADO.NET** | `src/Dispatcher/` |
+| Клиентский модуль (водитель) | C# WinForms + **Entity Framework Core** | `src/Driver/` |
+| Исходные данные | CSV, JSON | `Data/` |
 
-## Установка и запуск
+## Требования
 
-### 1. База данных
-- Установите SQL Server (Express или Developer).
-- Выполните скрипты из папки `Database` в порядке нумерации:
-  1. `01_CreateTables.sql`
-  2. `02_InsertReferenceData.sql`
-  3. `03_ImportCSV.sql`
-  4. `04_Indexes.sql`
-  5. `05_Views.sql`
-  6. `06_StoredProcedures.sql`
+- Windows 10/11
+- **Visual Studio 2022** (рабочая нагрузка «Разработка классических приложений .NET»)
+- **SQL Server** или **LocalDB** (входит в Visual Studio)
+- .NET SDK 8+ (в проекте используется .NET 10)
 
-### 2. Приложение диспетчера
-- Откройте `DispatcherApp/DispatcherApp.sln` в Visual Studio.
-- В `App.config` укажите строку подключения к вашей БД.
-- Нажмите F5.
+## Быстрый старт
 
-### 3. Приложение водителя
-- Откройте `DriverApp/DriverApp.sln` в Visual Studio.
-- В `App.config` укажите строку подключения.
-- Нажмите F5.
+### 1. Создание базы данных
 
-## Скриншоты
-См. папку `Docs/` или пояснительную записку.
+В PowerShell из корня проекта:
 
-## Автор
-Студент группы [ваша группа] [ваша фамилия]# -
+```powershell
+cd Database
+.\Deploy.ps1
+```
+
+Либо в **SQL Server Management Studio** по очереди выполните файлы:
+`01_CreateDatabase.sql` → `02_Schema.sql` → `03_Indexes_Views_Procedures.sql` → `04_SeedData.sql`
+
+### 2. Открытие в Visual Studio
+
+Откройте файл `TransLogistService.sln`.
+
+Строка подключения (по умолчанию LocalDB):
+
+```
+Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TransLogistDB;Integrated Security=True;TrustServerCertificate=True
+```
+
+При использовании полного SQL Server измените `Data\config.json` → `connection_strings.default`.
+
+### 3. Запуск приложений
+
+| Проект | Назначение |
+|--------|------------|
+| **TransLogistService.Dispatcher** | Диспетчер: CRUD, заказы, SQL-консоль, отчёты |
+| **TransLogistService.Driver** | Водитель: биржа грузов, личный кабинет, бронирование |
+
+**Учётные записи водителей** (пароль для всех: `12345`):
+
+| Логин | Водитель |
+|-------|----------|
+| driver01 | Сидоров И.П. (DR001) |
+| driver02 | Петров А.И. |
+| driver04 | Алиев Р.М. |
+
+## Функции по ТЗ
+
+### Диспетчер
+- Просмотр водителей, транспорта, клиентов
+- Создание заявок (`sp_CreateOrder`)
+- Назначение водителя (`sp_AssignDriverToOrder`)
+- Смена статуса заказа
+- SQL-консоль для произвольных запросов
+- Отчёты: выполненные заказы, финансы по направлениям
+
+### Водитель
+- Биржа грузов (представление `vw_ExchangeOrders`) с фильтрами
+- Поиск попутных грузов (`sp_FindMatchingLoads`)
+- Кнопка «Взять заказ» (`sp_TakeOrder`)
+- Личный кабинет: активные заказы, баланс, завершение рейса
+- Срочные заказы подсвечиваются красным
+
+### База данных
+- Нормализация до 3НФ: `Drivers`, `Vehicles`, `Orders`, `Clients`, справочники
+- CHECK-ограничения на вес, объём, цену, рейтинг
+- Индексы по дате и статусу
+- Представления: `vw_CompletedOrdersReport`, `vw_DriverActivity`, `vw_ExchangeOrders`, `vw_FinancialSummary`
+
+## Структура ER (кратко)
+
+```
+Clients ──< Orders >── Drivers
+              │              │
+              │              └── Vehicles (BodyTypes)
+              └── CargoTypes, OrderStatuses
+Orders ──< OrderBookings, TripHistory
+```
+
+## Документация для защиты
+
+Для пояснительной записки используйте:
+- ER-диаграмму по таблицам из `02_Schema.sql`
+- Use Case: акторы **Диспетчер** и **Водитель**
+- Скриншоты форм после запуска приложений
+
+## Устранение неполадок
+
+- **Ошибка подключения** — проверьте, что LocalDB запущен: `sqllocaldb info MSSQLLocalDB`
+- **sqlcmd не найден** — установите [SQL Server Command Line Utilities](https://learn.microsoft.com/sql/tools/sqlcmd/sqlcmd-utility)
+- Смена сервера: отредактируйте `Data/config.json`
